@@ -205,7 +205,7 @@
             const key = document.getElementById('key').value;
             const params = {
                 symbol: document.getElementById('cancelOrderSymbol').value,
-                orderID: document.getElementById('cancelOrderID').value
+                orderId: document.getElementById('cancelOrderID').value
             }
             fetch(`${server}/cancel`, {
                 method: 'POST',
