@@ -1,38 +1,106 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import rateLimit from 'express-rate-limit';
-import { trigger_order, query_cancel, get_holding_positions, get_account_info, limit_order } from './mexc.js';
+import MexcAPI from './mexc.js';
 
-const app = express();
-const PORT = 7777; // Ensure you're using HTTP for testing or configure HTTPS properly
+// Rate limiting state (in production, use a database or Redis)
+const rateLimitStore = new Map();
 
-// Rate limiting: 1 request per 10 seconds
-const limiter = rateLimit({
-    windowMs: 10 * 1000, // 10 seconds
-    max: 1, // limit each IP to 1 request per windowMs
-    message: JSON.stringify({
-        error: 'Rate limit exceeded',
-        message: 'You can only request once every 10 seconds in demo test.',
-    }),
-    standardHeaders: true,
-    legacyHeaders: false,
-});
+function checkRateLimit(ip) {
+    const now = Date.now();
+    const lastRequest = rateLimitStore.get(ip);
+    
+    if (lastRequest && now - lastRequest < 10000) {
+        return false;
+    }
+    
+    rateLimitStore.set(ip, now);
+    return true;
+}
 
-app.use(express.json()); // Ensure JSON body parsing
-app.use(bodyParser.urlencoded({ extended: true }));
+async function trigger_order(req, res) {
+    try {
+        const { key, ...params } = req.body;
+        const result = await MexcAPI.trigger_order(key, params);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+}
 
-app.get('/', (req, res) => {
-    res.sendFile('index.html', { root: '.' });
-})
+async function query_cancel(req, res) {
+    try {
+        const { key, ...params } = req.body;
+        const result = await MexcAPI.query_cancel(key, params);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+}
 
-app.use(limiter);
+async function limit_order(req, res) {
+    try {
+        const { key, ...params } = req.body;
+        const result = await MexcAPI.limit_order(key, params);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+}
 
-app.post('/trigger', trigger_order);
+async function get_holding_positions(req, res) {
+    try {
+        const { key, ...params } = req.body;
+        const result = await MexcAPI.get_holding_positions(key, params);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+}
 
-app.post('/cancel', query_cancel);
+async function get_account_info(req, res) {
+    try {
+        const { key } = req.body;
+        const result = await MexcAPI.get_account_info(key);
+        return res.status(200).json(result);
+    } catch (error) {
+        return res.status(400).json({ error: error.message });
+    }
+}
 
-app.post('/limit', limit_order);
+export default function handler(req, res) {
+    const { method, url } = req;
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
 
-app.listen(PORT, () => {
-    console.log(`Server is listening on http://localhost:${PORT}`);
-});
+    // Rate limiting
+    if (!checkRateLimit(ip)) {
+        return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: 'You can only request once every 10 seconds in demo test.',
+        });
+    }
+
+    // Route handling
+    if (method === 'GET' && url === '/') {
+        return res.status(200).send('<html><body><h1>API Server</h1></body></html>');
+    }
+
+    if (method === 'POST' && url === '/trigger') {
+        return trigger_order(req, res);
+    }
+
+    if (method === 'POST' && url === '/cancel') {
+        return query_cancel(req, res);
+    }
+
+    if (method === 'POST' && url === '/limit') {
+        return limit_order(req, res);
+    }
+
+    if (method === 'POST' && url === '/positions') {
+        return get_holding_positions(req, res);
+    }
+
+    if (method === 'POST' && url === '/account') {
+        return get_account_info(req, res);
+    }
+
+    res.status(404).json({ error: 'Not found' });
+}

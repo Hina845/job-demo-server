@@ -1,479 +1,304 @@
 import axios from 'axios';
 import md5 from 'md5';
 
-const  get_signature = (key, obj = '') => {
-    let date_now = String(Date.now());
-    let g = md5(key + date_now).substring(7);
-    let s = JSON.stringify(obj);
-    let sign = md5(date_now + s + g);
+class MexcAPI {
+    static get_signature(key, obj = '') {
+        let date_now = String(Date.now());
+        let g = md5(key + date_now).substring(7);
+        let s = JSON.stringify(obj);
+        let sign = md5(date_now + s + g);
 
-    return { time: date_now, sign: sign };    
-}
-
-const get_headers = (key, sign) => {
-    return {
-        accept: "*/*",
-        "accept-encoding": "gzip, deflate, br, zstd",
-        "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-        "authorization": key,
-        "content-type": "application/json",
-        "x-kl-ajax-request": "Ajax_Request",
-        "x-mxc-nonce": sign.time,
-        "x-mxc-sign": sign.sign,
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/',
-    }   
-}
-
-async function trigger_order(req, res) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
+        return { time: date_now, sign: sign };    
     }
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [key, params]' });
-        return;
-    }
-    const mandatory_params = [
-        'symbol',       // The name of the contract
-        'side',         // 1: buy long, 2: buy short, 3: sell short, 4: sell long
-        'vol',          // Volume
-        'price',        // Price   
-        'triggerPrice', // Trigger price
-        'triggerType',  // 1: >=, 2: <=
-        'executeCycle', // Execution cycle, 1: 24 hours, 2: 7 days
-        'orderType',    // 1: limit, 2: Post Only, 3: Close or cancel instantly, 4: Close or cancel completely, 5: Market order
-        'trend',        // 1: Lastest price, 2: Fair price, 3: Index price
-        'openType',     // 1. isolated, 2. cross
-        'stopLossPrice', // Stop loss price
-        'takeProfitPrice', // Take profit price
-    ]
 
-    const required_params = [
-        'triggerPrice',
-        'triggerType',
-        'symbol',
-        'side',
-        'vol',
-    ]
-    for (let key of required_params) {
-        if (!obj[key]) {
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol, side, vol, price]` });
-            return;
+    static get_headers(key, sign) {
+        return {
+            accept: "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "authorization": key,
+            "content-type": "application/json",
+            "x-kl-ajax-request": "Ajax_Request",
+            "x-mxc-nonce": sign.time,
+            "x-mxc-sign": sign.sign,
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/',
+        }   
+    }
+
+    static async trigger_order(key, params) {
+        if (!key) {
+            throw new Error('No authority!');
         }
-    }
-    if (!obj.executeCycle) obj.executeCycle = 3;
-    if (!obj.orderType) obj.orderType = 5;
-    if (!obj.trend) obj.trend = 1;
-    if (!obj.priceProtect) obj.priceProtect = "0";
-    if (!obj.price) obj.price = obj.triggerPrice;
-    if (!obj.openType) obj.openType = 2;
+        
+        if (!params) {
+            throw new Error('Missing parameters: Required [key, params]');
+        }
 
-    const sign = get_signature(req.body.key, obj);
-    try {
+        const required_params = [
+            'triggerPrice',
+            'triggerType',
+            'symbol',
+            'side',
+            'vol',
+        ];
+
+        for (let param of required_params) {
+            if (!params[param]) {
+                throw new Error(`Missing parameter: ${param}`);
+            }
+        }
+
+        if (!params.executeCycle) params.executeCycle = 3;
+        if (!params.orderType) params.orderType = 5;
+        if (!params.trend) params.trend = 1;
+        if (!params.priceProtect) params.priceProtect = "0";
+        if (!params.price) params.price = params.triggerPrice;
+        if (!params.openType) params.openType = 2;
+
+        const sign = this.get_signature(key, params);
+        
         const response = await axios({
             method: 'POST',
             url: 'https://futures.mexc.com/api/v1/private/planorder/place',
-            data: obj,
-            headers: get_headers(req.body.key, sign)
-        })
-        res.status(200).json(response.data);
-    } catch(error) {
-        res.status(400).json({ success: false, error: error.response.data});
+            data: params,
+            headers: this.get_headers(key, sign)
+        });
+        
+        return response.data;
     }
-}
 
-async function limit_order(req, res) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    req.body.params = req.body.params;
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [key, params]' });
-        return;
-    }
-    const mandatory_params = [
-        'symbol',       // The name of the contract
-        'price',        // Price
-        'vol',          // Volume
-        'side',         // 1: buy long, 2: buy short, 3: sell short, 4: sell long
-        'type',         // 1: limit, 2: Post Only, 3: Transact or cancel instantly, 4: Transact or cancel completely, 5: Market order, 6: Convert market price to current price
-        'openType',     // 1. isolated, 2. cross
-        'stopLossPrice', // Stop loss price
-        'takeProfitPrice', // Take profit price
-    ];
-    const required_params = [
-        'symbol',
-        'side',
-        'vol',
-        'price',
-    ];
-
-    if (!obj.type) obj.type = "2";
-    if (!obj.openType) obj.openType = 2;
-    if (!obj.priceProtect) obj.priceProtect = "0";
-
-    for (let key of required_params) {
-        if (!obj[key]) {
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol, side, vol, price]` });
-            return;
+    static async limit_order(key, params) {
+        if (!key) {
+            throw new Error('No authority!');
         }
-    }
+        
+        if (!params) {
+            throw new Error('Missing parameters: Required [key, params]');
+        }
 
-    let sign = get_signature(req.body.key, obj);
-    
-    try {
-        const request_time = Date.now();
+        const required_params = [
+            'symbol',
+            'side',
+            'vol',
+            'price',
+        ];
+
+        for (let param of required_params) {
+            if (!params[param]) {
+                throw new Error(`Missing parameter: ${param}`);
+            }
+        }
+
+        if (!params.type) params.type = "2";
+        if (!params.openType) params.openType = 2;
+        if (!params.priceProtect) params.priceProtect = "0";
+
+        let sign = this.get_signature(key, params);
+        
         const response = await axios({
             method: 'POST',
             url: 'https://futures.mexc.com/api/v1/private/order/submit',
-            data: obj,
-            headers: get_headers(req.body.key, sign)
+            data: params,
+            headers: this.get_headers(key, sign)
         });
-        res.status(200).json({ response: response.data});
-    } catch (error) {
-        console.log(error)
-        res.status(400).json({ response: error.response.data});
-    }
-}
-
-async function cancel_trigger(req, res, set_status = true) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        if (!set_status) return [];
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [orderIds: Array[string]]' });
-        return;
+        
+        return response.data;
     }
 
-    const required_params = [
-        'orders'
-    ]
-    for (let key of required_params) {
-        if (!obj[key]) {
-            if (!set_status) return {success: true, message: 'No order to cancel!'};
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol]` });
-            return;
+    static async cancel_trigger(key, params) {
+        if (!key) {
+            throw new Error('No authority!');
         }
-    }
-    if (obj.orders.length === 0) {
-        if (!set_status) return [];
-        res.status(200).json({ success: true, message: 'No order to cancel!' });
-    }
+        
+        if (!params || !params.orders) {
+            return { success: true, message: 'No order to cancel!' };
+        }
 
-    let sign = get_signature(req.body.key, obj.orders);
-    
-    try {
+        if (params.orders.length === 0) {
+            return { success: true, message: 'No order to cancel!' };
+        }
+
+        let sign = this.get_signature(key, params.orders);
+        
         const response = await axios({
             method: 'POST',
             url: 'https://futures.mexc.com/api/v1/private/planorder/cancel',
-            data: obj.orders,
-            headers: get_headers(req.body.key, sign),
+            data: params.orders,
+            headers: this.get_headers(key, sign),
         });
-        if (!set_status) return response.data;
-        res.status(200).json({  response: response.data });
-    } catch (error) {
-        if (!set_status) return [];
-        res.status(400).json(response.data);
-    }
-}
-/**
- * This API works, but since MEXC response the wrong orderId after placing orders, this API will not working as expected, I recommend using query_cancel instead
- * You can have the right orderIds by fetching all pending orders from mexc API, or on browser, switch to open orders, inspect one of the order then get the orderID
- * data-row-key attribute of its element
- */
-async function cancel(req, res, set_status = true) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        if (!set_status) return [];
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [orderIds: Array[string]]' });
-        return;
+        
+        return response.data;
     }
 
-    const required_params = [
-        'orderIds'
-    ]
-    for (let key of required_params) {
-        if (!obj[key]) {
-            if (!set_status) return [];
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol]` });
-            return;
+    static async cancel(key, params) {
+        if (!key) {
+            throw new Error('No authority!');
         }
-    }
-    if (obj.orderIds.length === 0) {
-        if (!set_status) return {success: true, message: 'No order to cancel!'};
-        res.status(200).json({ success: true, message: 'No order to cancel!' });
-    }
+        
+        if (!params || !params.orderIds) {
+            return { success: true, message: 'No order to cancel!' };
+        }
 
-    let sign = get_signature(req.body.key, obj.orderIds);
-    
-    try {
+        if (params.orderIds.length === 0) {
+            return { success: true, message: 'No order to cancel!' };
+        }
+
+        let sign = this.get_signature(key, params.orderIds);
+        
         const response = await axios({
             method: 'POST',
             url: 'https://futures.mexc.com/api/v1/private/order/cancel',
-            data: obj.orderIds,
-            headers: get_headers(req.body.key, sign)
+            data: params.orderIds,
+            headers: this.get_headers(key, sign)
         });
-        if (!set_status) return response.data;
-        res.status(200).json(response.data);
-    } catch (error) {
-        if (!set_status) return [];
-        res.status(400).json({ response: response.data});
-    }
-}
-/**
- * This API will cancel all orders that match the parameters in the request, you can add multiple parameters to narrow down the search
- * Note that orderIDs returned from mexc are bot correct since it's maintaining, so we will need to request for all pending orders and filter them out
- */
-async function query_cancel(req, res) {
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [key, params]' });
-        return;
+        
+        return response.data;
     }
 
-    const required_params = [
-        'symbol',
-    ];
-    for (let key of required_params) {
-        if (!obj[key]) {
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol]` });
-            return;
+    static async query_cancel(key, params) {
+        if (!key || !params) {
+            throw new Error('Missing parameters: Required [key, params]');
         }
-    }
 
-    const accepted_params = [
-        'symbol', // The name of the contract
-        'side', // 1: buy long, 2: buy short, 3: sell short, 4: sell long
-        'vol', // Volume
-        'price', // Price
-        'orderId', // Order ID
-        'leverage', // Leverage
-    ];
-    for (let key of Object.keys(obj)) {
-        if (!accepted_params.includes(key)) {
-            res.status(400).json({ success: false, message: `Invalid parameter for params: Accepted [symbol, side, vol, createTime, price, orderId]` });
-            return;
+        if (!params.symbol) {
+            throw new Error('Missing parameter: symbol');
         }
-    }
 
-    try {
-        const query_req = {symbol: obj.symbol};
-        let pending_orders = await get_limit_pending_orders({
-            body: {
-                key: req.body.key,
-                params: query_req
+        const accepted_params = [
+            'symbol', 'side', 'vol', 'price', 'orderId', 'leverage'
+        ];
+        
+        for (let param of Object.keys(params)) {
+            if (!accepted_params.includes(param)) {
+                throw new Error(`Invalid parameter: ${param}`);
             }
-        }, res, false);
-        pending_orders = pending_orders.data;
-        if (!pending_orders) pending_orders = [];
-        let trigger_orders = await get_trigger_pending_orders({
-            body: {
-                key: req.body.key,
-                params: query_req
-            }
-        }, res, false);
-        trigger_orders = trigger_orders.data;
-        if (!trigger_orders) trigger_orders = [];
+        }
+
+        const query_req = { symbol: params.symbol };
+        
+        let pending_orders = await this.get_limit_pending_orders(key, query_req);
+        pending_orders = pending_orders.data || [];
+        
+        let trigger_orders = await this.get_trigger_pending_orders(key, query_req);
+        trigger_orders = trigger_orders.data || [];
+        
         let marked_orders = {
             'limit': [],
             'trigger': []
         };
-        console.log(pending_orders, trigger_orders);
+
         for (let order of pending_orders.concat(trigger_orders)) {
             let match = true;
-            for (let key of Object.keys(obj)) {
-                if (key === 'orderId') {
+            for (let param of Object.keys(params)) {
+                if (param === 'orderId') {
                     let order_id = order.orderId ? BigInt(order.orderId)/1000n : BigInt(order.id)/1000n;
-                    if (BigInt(obj[key])/1000n !== order_id) match = false;
+                    if (BigInt(params[param])/1000n !== order_id) match = false;
                 } 
-                else if (order[key] && order[key] !== obj[key]) match = false;
+                else if (order[param] && order[param] !== params[param]) match = false;
             }
             if (match) {
                 if (order.orderId) marked_orders.limit.push(order.orderId);
-                else marked_orders.trigger.push({symbol: obj.symbol, orderId: order.id});
+                else marked_orders.trigger.push({symbol: params.symbol, orderId: order.id});
             }
         }
-        console.log(marked_orders);
-        if (marked_orders.length === 0) {
-            res.status(200).json({ success: true, message: 'No matched orders!' });
-            return;
+
+        if (marked_orders.limit.length === 0 && marked_orders.trigger.length === 0) {
+            return { success: true, message: 'No matched orders!' };
         }
-        const limit_cancel_req = {
-            body: {
-                key: req.body.key,
-                params: { orderIds: marked_orders.limit }
-            }
-        };
-        const limit_response = await cancel(limit_cancel_req, res, false);
-        const trigger_cancel_req = {
-            body: {
-                key: req.body.key,
-                params: { orders: marked_orders.trigger }
-            }
-        };
-        const trigger_response = await cancel_trigger(trigger_cancel_req, res, false);
-        const response = {
+
+        const limit_response = marked_orders.limit.length > 0 ? 
+            await this.cancel(key, { orderIds: marked_orders.limit }) : null;
+        
+        const trigger_response = marked_orders.trigger.length > 0 ? 
+            await this.cancel_trigger(key, { orders: marked_orders.trigger }) : null;
+
+        return {
             success: true,
             limit_response: limit_response,
             trigger_response: trigger_response
+        };
+    }
+
+    static async get_trigger_pending_orders(key, params = {}) {
+        if (!key) {
+            throw new Error('No authority!');
         }
-        if (response && response.success) {
-            res.status(200).json({ response: response });
+
+        if (!params.states) params.states = "1";
+
+        let req_url = `https://futures.mexc.com/api/v1/private/planorder/list/orders?`;
+        for (let param of Object.keys(params)) {
+            req_url += `${param}=${params[param]}&`;
         }
-    } catch (error) {
-        console.log(error);
-        res.status(400).json(response.data);
-    }
 
-}
+        let sign = this.get_signature(key);
 
-async function get_trigger_pending_orders(req, res, set_status = true) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let obj = {};
-    if (req.body.params) obj = req.body.params;
-    if (!req.body.key) {
-        if (!set_status) return [];
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [key, params]' });
-        return;
-    }
-
-    if (!obj.states) obj.states = "1";
-
-    let req_url = `https://futures.mexc.com/api/v1/private/planorder/list/orders?`;
-    for (let key of Object.keys(obj)) {
-        req_url += `${key}=${obj[key]}&`;
-    }
-
-    let sign = get_signature(req.body.key);
-
-    try {
         const response = await axios({
             method: 'GET',
             url: req_url,
-            headers: get_headers(req.body.key, sign)
+            headers: this.get_headers(key, sign)
         });
-        if (!set_status) return response.data
-        res.status(200).json(response.data);
-    } catch (error) {
-        if (!set_status) return [];
-        res.status(400).json(response.data);
+        
+        return response.data;
     }
-}
 
-async function get_limit_pending_orders(req, res, set_status = true) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let obj = req.body.params;
-    if (!req.body.key || !obj) {
-        if (!set_status) return [];
-        res.status(400).json({ success: false, message: 'Missing parameters: Required [key, params]' });
-        return;
-    }
-    const required_params = [
-        'symbol',
-    ];
-
-    for (let key of required_params) {
-        if (!obj[key]) {
-            if (!set_status) return [];
-            res.status(400).json({ success: false, message: `Missing parameter for params: Required [symbol]` });
-            return;
+    static async get_limit_pending_orders(key, params) {
+        if (!key || !params) {
+            throw new Error('Missing parameters: Required [key, params]');
         }
-    }
-    let req_url = `https://futures.mexc.com/api/v1/private/order/list/open_orders/${obj.symbol}?`;
-    for (let key of Object.keys(obj)) {
-        if (key !== 'symbol') req_url += `${key}=${obj[key]}&`;
-    }
+        
+        if (!params.symbol) {
+            throw new Error('Missing parameter: symbol');
+        }
 
-    let sign = get_signature(req.body.key);
+        let sign = this.get_signature(key);
 
-    try {
         const response = await axios({
             method: 'GET',
-            url: `https://futures.mexc.com/api/v1/private/order/list/open_orders/${obj.symbol}`,
-            headers: get_headers(req.body.key, sign)
+            url: `https://futures.mexc.com/api/v1/private/order/list/open_orders/${params.symbol}`,
+            headers: this.get_headers(key, sign)
         });
-        if (!set_status) return response.data
-        res.status(200).json(response.data);
-    } catch (error) {
-        if (!set_status) return [];
-        res.status(400).json(response.data);
+        
+        return response.data;
     }
-}
 
-async function get_holding_positions(req, res) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let obj = req.body.params;
-    if (!obj || !obj.symbol) {
-        res.status(400).json({ success: false, message: 'Missing parameter for params: Required [symbol]' });
-        return;
-    }
-    let req_url = `https://futures.mexc.com/api/v1/private/position/open_positions`;
-    if (obj.symbol) {
-        req_url += `?symbol=${obj.symbol}`;
-    }
-    let sign = get_signature(req.body.key);
+    static async get_holding_positions(key, params) {
+        if (!key) {
+            throw new Error('No authority!');
+        }
+        
+        if (!params || !params.symbol) {
+            throw new Error('Missing parameter: symbol');
+        }
 
-    try {
+        let req_url = `https://futures.mexc.com/api/v1/private/position/open_positions?symbol=${params.symbol}`;
+        let sign = this.get_signature(key);
+
         const response = await axios({
             method: 'GET',
             url: req_url,
-            headers: get_headers(req.body.key, sign)
+            headers: this.get_headers(key, sign)
         });
-        res.status(200).json(response.data);
-    } catch (error) {
-        res.status(400).json({ success: false, error: error.response.data });
+        
+        return response.data;
     }
-}
 
-async function get_account_info(req, res) {
-    if (!req.body.key) {
-        res.status(400).json({ success: false, message: 'No authority!' });
-        return;
-    }
-    let req_url = "https://futures.mexc.com/api/v1/private/account/asset/USDT";
-    let sign = get_signature(req.body.key);
+    static async get_account_info(key) {
+        if (!key) {
+            throw new Error('No authority!');
+        }
 
-    try {
+        let req_url = "https://futures.mexc.com/api/v1/private/account/asset/USDT";
+        let sign = this.get_signature(key);
+
         const response = await axios({
             method: 'GET',
             url: req_url,
-            headers: get_headers(req.body.key, sign)
+            headers: this.get_headers(key, sign)
         });
-        res.status(200).json(response.data);
-    } catch (error) {
-        res.status(400).json({ success: false, error: error.response.data });
+        
+        return response.data;
     }
 }
 
-
-
-export {
-    limit_order,
-    trigger_order,
-    cancel,
-    query_cancel,
-    get_limit_pending_orders,
-    get_trigger_pending_orders,
-    cancel_trigger,
-    get_holding_positions,
-    get_account_info
-}
+export default MexcAPI;
