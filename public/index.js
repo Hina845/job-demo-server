@@ -1,4 +1,4 @@
-import MexcAPI from './mexc.js';
+import MexcAPI from '../api/mexc.js';
 
 // Rate limiting state (in production, use a database or Redis)
 const rateLimitStore = new Map();
