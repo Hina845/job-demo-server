@@ -131,8 +131,7 @@
     <p id = response_message></p>
 
     <script>
-        const server = "https://hina-trading-tools.onrender.com/api/v1"
-        const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MWI2OTRiNDA0NDBlOTY3YTRhODRhYiIsImlhdCI6MTc0ODYxNzEwNiwiZXhwIjoxNzQ4NzAzNTA2fQ.nkTYYN0tDZSZdKuS7_DuoN1wa7YFXDU5io0n1gJqmc0"
+        const server = ""
         function switchForm() {
             
             const formType = document.getElementById('formType').value;
@@ -154,16 +153,14 @@
                 vol: document.getElementById('limitVolume').value,
                 side: document.getElementById('limitSide').value === 'buy' ? 1: 3
             }
-            fetch(`${server}/limit/order`, {
+            fetch(`${server}/limit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Origin': 'https://www.mexc.com'
                 },
                 body: JSON.stringify({
                     key: key,
                     params: params,
-                    token: token
                 })
             }).then(response => response.json())
               .then(data => {
@@ -185,17 +182,14 @@
                 vol: document.getElementById('triggerVolume').value,
                 side: document.getElementById('triggerSide').value === 'buy' ? 1 : 3
             }
-            fetch(`${server}/trigger/order`, {
+            fetch(`${server}/trigger`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Origin': 'https://www.mexc.com',
-
                 },
                 body: JSON.stringify({
                     key: key,
                     params: params,
-                    token: token
                 })
             }).then(response => response.json())
               .then(data => {
@@ -213,16 +207,14 @@
                 symbol: document.getElementById('cancelOrderSymbol').value,
                 orderID: document.getElementById('cancelOrderID').value
             }
-            fetch(`${server}/query-cancel`, {
+            fetch(`${server}/cancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Origin': 'https://www.mexc.com'
                 },
                 body: JSON.stringify({
                     key: key,
                     params: params,
-                    token: token
                 })
             }).then(response => response.json())
               .then(data => {
