@@ -131,6 +131,7 @@
     <p id = response_message></p>
 
     <script>
+        const server = ""
         function switchForm() {
             
             const formType = document.getElementById('formType').value;
@@ -152,10 +153,11 @@
                 vol: document.getElementById('limitVolume').value,
                 side: document.getElementById('limitSide').value === 'buy' ? 1: 3
             }
-            fetch(`/limit`, {
+            fetch(`${server}/limit/order`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://www.mexc.com'
                 },
                 body: JSON.stringify({
                     key: key,
@@ -181,10 +183,12 @@
                 vol: document.getElementById('triggerVolume').value,
                 side: document.getElementById('triggerSide').value === 'buy' ? 1 : 3
             }
-            fetch(`/trigger`, {
+            fetch(`${server}/trigger/order`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://www.mexc.com'
+
                 },
                 body: JSON.stringify({
                     key: key,
@@ -206,10 +210,11 @@
                 symbol: document.getElementById('cancelOrderSymbol').value,
                 orderID: document.getElementById('cancelOrderID').value
             }
-            fetch(`/cancel`, {
+            fetch(`${server}/query-cancel`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://www.mexc.com'
                 },
                 body: JSON.stringify({
                     key: key,
