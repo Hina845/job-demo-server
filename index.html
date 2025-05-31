@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .form-container {
+            display: none;
+        }
+        .form-container.active {
+            display: block;
+        }
+        div {
+            margin: 10px 0;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+        }
+        input, select {
+            padding: 5px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <label for="key">Key:</label>
+        <input type="text" id="key" name="key" required>
+    </div>
+    <div>
+        <label for="formType">Form Type:</label>
+        <select id="formType" onchange="switchForm()">
+            <option value="">Select form type</option>
+            <option value="limit">Limit Order</option>
+            <option value="trigger">Trigger Order</option>
+            <option value="cancel">Cancel Order</option>
+        </select>
+    </div>
+
+    <!-- Form 1: Limit Order -->
+    <div id="limitForm" class="form-container">
+        <h2>Limit Order</h2>
+        <form>
+            <div>
+                <label for="limitSymbol">Symbol:</label>
+                <input type="text" id="limitSymbol" name="symbol" value = "BTC_USDT" required>
+            </div>
+            <div>
+                <label for="limitPrice">Price:</label>
+                <input type="number" id="limitPrice" name="price" step="0.01" value = "70000" required>
+            </div>
+            <div>
+                <label for="limitVolume">Volume - Cont (1 cont ~ 0.0001 BTC):</label>
+                <input type="number" id="limitVolume" name="volume" step="0.01" value = 1 required>
+            </div>
+            <div>
+                <label for="limitSide">Side:</label>
+                <select id="limitSide" name="side" required>
+                    <option value="">Select side</option>
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                </select>
+            </div>
+            <div>
+                <button id = "limit">Submit Limit Order</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Form 2: Trigger Order -->
+    <div id="triggerForm" class="form-container">
+        <h2>Trigger Order</h2>
+        <form>
+            <div>
+                <label for="triggerSymbol">Symbol:</label>
+                <input type="text" id="triggerSymbol" name="symbol" value = "BTC_USDT" required>
+            </div>
+            <div>
+                <label for="triggerTriggerPrice">Trigger Price:</label>
+                <input type="number" id="triggerTriggerPrice" name="triggerPrice" value = "70000" step="0.01" required>
+            </div>
+            <div>
+                <label for="triggerPrice">Price:</label>
+                <input type="number" id="triggerPrice" name="price" step="0.01" value = "69000" required>
+            </div>
+            <div>
+                <label for="triggerVolume">Volume - cont (1 cont ~ 0.0001 BTC):</label>
+                <input type="number" id="triggerVolume" name="volume" step="0.01" value = 1 required>
+            </div>
+            <div>
+                <label for="triggerType">Side:</label>
+                <select id="triggerType" name="trigger type" required>
+                    <option value="">Select Trigger Type (Trigger when price >= or <= triggerPrice)</option>
+                    <option value="buy">>=</option>
+                    <option value="sell"><=</option>
+                </select>
+            </div>
+            <div>
+                <label for="triggerSide">Side:</label>
+                <select id="triggerSide" name="side" required>
+                    <option value="">Select side</option>
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                </select>
+            </div>
+            <div>
+                <button id = "trigger">Submit Trigger Order</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Form 3: Cancel Order -->
+    <div id="cancelForm" class="form-container">
+        <h2>Cancel Order</h2>
+        <form>
+            <div>
+                <label for="cancelOrderSymbol">Symbol:</label>
+                <input type="text" id="cancelOrderSymbol" name="symbol" required>
+            </div>
+            <div>
+                <label for="cancelOrderID">Order ID:</label>
+                <input type="text" id="cancelOrderID" name="orderID" required>
+            </div>
+            <div>
+                <button id = cancel>Cancel Order</button>
+            </div>
+        </form>
+    </div>
+
+    <p id = response_message></p>
+
+    <script>
+        function switchForm() {
+            
+            const formType = document.getElementById('formType').value;
+            const forms = document.querySelectorAll('.form-container');
+            
+            forms.forEach(form => form.classList.remove('active'));
+            
+            if (formType) {
+                document.getElementById(formType + 'Form').classList.add('active');
+            }
+        }
+
+        document.getElementById('limit').addEventListener('click', function(event) {
+            event.preventDefault();
+            const key = document.getElementById('key').value;
+            const params = {
+                symbol: document.getElementById('limitSymbol').value,
+                price: document.getElementById('limitPrice').value,
+                vol: document.getElementById('limitVolume').value,
+                side: document.getElementById('limitSide').value === 'buy' ? 1: 3
+            }
+            fetch(`/limit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: key,
+                    params: params
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  document.getElementById('response_message').innerText = JSON.stringify(data);
+              })
+              .catch(error => {
+                  document.getElementById('response_message').innerText = 'Error: ' + error;
+              });
+        });
+
+        document.getElementById('trigger').addEventListener('click', function(event) {
+            event.preventDefault();
+            const key = document.getElementById('key').value;
+            const params = {
+                symbol: document.getElementById('triggerSymbol').value,
+                triggerPrice: document.getElementById('triggerTriggerPrice').value,
+                triggerType: document.getElementById('triggerType').value === '>=' ? "1" : "2",
+                price: document.getElementById('triggerPrice').value,
+                vol: document.getElementById('triggerVolume').value,
+                side: document.getElementById('triggerSide').value === 'buy' ? 1 : 3
+            }
+            fetch(`/trigger`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: key,
+                    params: params
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  document.getElementById('response_message').innerText = JSON.stringify(data);
+              })
+              .catch(error => {
+                  document.getElementById('response_message').innerText = 'Error: ' + error;
+              });
+        });
+
+        document.getElementById('cancel').addEventListener('click', function(event) {
+            event.preventDefault();
+            const key = document.getElementById('key').value;
+            const params = {
+                symbol: document.getElementById('cancelOrderSymbol').value,
+                orderID: document.getElementById('cancelOrderID').value
+            }
+            fetch(`/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    key: key,
+                    params: params
+                })
+            }).then(response => response.json())
+              .then(data => {
+                  document.getElementById('response_message').innerText = JSON.stringify(data);
+              })
+              .catch(error => {
+                  document.getElementById('response_message').innerText = 'Error: ' + error;
+              });
+        });
+        
+    </script>
+</body>
+</html>
