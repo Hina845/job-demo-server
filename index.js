@@ -77,11 +77,6 @@ export default function handler(req, res) {
         });
     }
 
-    // Route handling
-    if (method === 'GET' && url === '/') {
-        return res.status(200).send('<html><body><h1>API Server</h1></body></html>');
-    }
-
     if (method === 'POST' && url === '/trigger') {
         return trigger_order(req, res);
     }
@@ -92,14 +87,6 @@ export default function handler(req, res) {
 
     if (method === 'POST' && url === '/limit') {
         return limit_order(req, res);
-    }
-
-    if (method === 'POST' && url === '/positions') {
-        return get_holding_positions(req, res);
-    }
-
-    if (method === 'POST' && url === '/account') {
-        return get_account_info(req, res);
     }
 
     res.status(404).json({ error: 'Not found' });
