@@ -10,21 +10,22 @@ const PORT = 7777; // Ensure you're using HTTP for testing or configure HTTPS pr
 const limiter = rateLimit({
     windowMs: 10 * 1000, // 10 seconds
     max: 1, // limit each IP to 1 request per windowMs
-    message: {
+    message: JSON.stringify({
         error: 'Rate limit exceeded',
         message: 'You can only request once every 10 seconds in demo test.',
-    },
+    }),
     standardHeaders: true,
     legacyHeaders: false,
 });
 
-app.use(limiter);
 app.use(express.json()); // Ensure JSON body parsing
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.get('/', (req, res) => {
     res.sendFile('index.html', { root: '.' });
 })
+
+app.use(limiter);
 
 app.post('/trigger', trigger_order);
 
