@@ -34,7 +34,109 @@
     </style>
 </head>
 <body>
-    <!-- Keep all your existing HTML form content -->
+    <div>
+        <label for="key">Key:</label>
+        <input type="text" id="key" name="key" required>
+    </div>
+    <div>
+        <label for="formType">Form Type:</label>
+        <select id="formType" onchange="switchForm()">
+            <option value="">Select form type</option>
+            <option value="limit">Limit Order</option>
+            <option value="trigger">Trigger Order</option>
+            <option value="cancel">Cancel Order</option>
+        </select>
+    </div>
+
+    <!-- Form 1: Limit Order -->
+    <div id="limitForm" class="form-container">
+        <h2>Limit Order</h2>
+        <form>
+            <div>
+                <label for="limitSymbol">Symbol:</label>
+                <input type="text" id="limitSymbol" name="symbol" value = "BTC_USDT" required>
+            </div>
+            <div>
+                <label for="limitPrice">Price:</label>
+                <input type="number" id="limitPrice" name="price" step="0.01" value = "70000" required>
+            </div>
+            <div>
+                <label for="limitVolume">Volume - Cont (1 cont ~ 0.0001 BTC):</label>
+                <input type="number" id="limitVolume" name="volume" step="0.01" value = 1 required>
+            </div>
+            <div>
+                <label for="limitSide">Side:</label>
+                <select id="limitSide" name="side" required>
+                    <option value="">Select side</option>
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                </select>
+            </div>
+            <div>
+                <button id = "limit">Submit Limit Order</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Form 2: Trigger Order -->
+    <div id="triggerForm" class="form-container">
+        <h2>Trigger Order</h2>
+        <form>
+            <div>
+                <label for="triggerSymbol">Symbol:</label>
+                <input type="text" id="triggerSymbol" name="symbol" value = "BTC_USDT" required>
+            </div>
+            <div>
+                <label for="triggerTriggerPrice">Trigger Price:</label>
+                <input type="number" id="triggerTriggerPrice" name="triggerPrice" value = "70000" step="0.01" required>
+            </div>
+            <div>
+                <label for="triggerPrice">Price:</label>
+                <input type="number" id="triggerPrice" name="price" step="0.01" value = "69000" required>
+            </div>
+            <div>
+                <label for="triggerVolume">Volume - cont (1 cont ~ 0.0001 BTC):</label>
+                <input type="number" id="triggerVolume" name="volume" step="0.01" value = 1 required>
+            </div>
+            <div>
+                <label for="triggerType">Side:</label>
+                <select id="triggerType" name="trigger type" required>
+                    <option value="">Select Trigger Type (Trigger when price >= or <= triggerPrice)</option>
+                    <option value="buy">>=</option>
+                    <option value="sell"><=</option>
+                </select>
+            </div>
+            <div>
+                <label for="triggerSide">Side:</label>
+                <select id="triggerSide" name="side" required>
+                    <option value="">Select side</option>
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                </select>
+            </div>
+            <div>
+                <button id = "trigger">Submit Trigger Order</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Form 3: Cancel Order -->
+    <div id="cancelForm" class="form-container">
+        <h2>Cancel Order</h2>
+        <form>
+            <div>
+                <label for="cancelOrderSymbol">Symbol:</label>
+                <input type="text" id="cancelOrderSymbol" name="symbol" required>
+            </div>
+            <div>
+                <label for="cancelOrderID">Order ID:</label>
+                <input type="text" id="cancelOrderID" name="orderID" required>
+            </div>
+            <div>
+                <button id = cancel>Cancel Order</button>
+            </div>
+        </form>
+    </div>
 
     <p id="response_message"></p>
 
