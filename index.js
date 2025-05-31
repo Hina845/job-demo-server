@@ -10,7 +10,10 @@ const PORT = 7777; // Ensure you're using HTTP for testing or configure HTTPS pr
 const limiter = rateLimit({
     windowMs: 10 * 1000, // 10 seconds
     max: 1, // limit each IP to 1 request per windowMs
-    message: 'You can only request once every 10 seconds in demo test.',
+    message: {
+        error: 'Rate limit exceeded',
+        message: 'You can only request once every 10 seconds in demo test.',
+    },
     standardHeaders: true,
     legacyHeaders: false,
 });
