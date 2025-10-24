@@ -64,6 +64,12 @@ export default function handler(req, res) {
     if (method === 'POST' && url === '/limit') {
         return limit_order(req, res);
     }
+    if (method === 'POST' && url === '/holding_position') {
+        return get_holding_positions(req, res);
+    }
+    if (method === 'POST' && url === '/account_info') {
+        return get_account_info(req, res);
+    }
 
     res.status(404).json({ error: 'Not found' });
 }
